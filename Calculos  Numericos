@@ -1,0 +1,395 @@
+import math
+import tkinter as tk
+from tkinter import messagebox, ttk
+
+
+# --- BACKEND (Según diagrama de clases StarUML) ---
+class CalculosNumericos:
+    @staticmethod
+    def neperiano(valor: float) -> float:
+        if valor <= 0:
+            raise ValueError("Valor negativo o nulo para logaritmo natural.")
+        return math.log(valor)
+
+    @staticmethod
+    def raiz_cuadrada(valor: float) -> float:
+        if valor < 0:
+            raise ValueError("Valor negativo para raíz cuadrada real.")
+        return math.sqrt(valor)
+
+    @staticmethod
+    def pendiente_recta(x1: float, y1: float, x2: float, y2: float) -> float:
+        if x2 == x1:
+            raise ValueError("Recta vertical: x1 y x2 no pueden ser iguales.")
+        return (y2 - y1) / (x2 - x1)
+
+    @staticmethod
+    def punto_medio(x1: float, y1: float, x2: float, y2: float) -> tuple[float, float]:
+        if x1 == x2 and y1 == y2:
+            raise ValueError("Mismo punto en ambos extremos.")
+        xm = round((x1 + x2) / 2, 1)
+        ym = round((y1 + y2) / 2, 1)
+        return xm, ym
+
+    @staticmethod
+    def raices_cuadratica(a: float, b: float, c: float) -> tuple[float, float]:
+        if a == 0:
+            raise ValueError("Falla la lógica matemática: 'a' no puede ser cero.")
+        discriminante = (b**2) - (4 * a * c)
+        if discriminante < 0:
+            raise ValueError("Discriminante negativo: sin soluciones reales.")
+        raiz_disc = math.sqrt(discriminante)
+        x1 = (-b - raiz_disc) / (2 * a)
+        x2 = (-b + raiz_disc) / (2 * a)
+        return x1, x2
+
+    @staticmethod
+    def convertir_base(numero: int, base: int) -> str:
+        if not (2 <= base <= 36):
+            raise ValueError("Base indefinida: debe estar entre 2 y 36.")
+        if numero < 0:
+            raise ValueError("El número debe ser un entero positivo o cero.")
+        if numero == 0:
+            return "0"
+
+        digitos = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        resultado: list[str] = []
+        actual = numero
+        while actual > 0:
+            actual, residuo = divmod(actual, base)
+            resultado.append(digitos[residuo])
+        return "".join(reversed(resultado))
+
+
+# --- FRONTEND (Estética Interfaz_3 + Estructura AppGUI StarUML) ---
+class AppGUI:
+    def __init__(self, raiz: tk.Tk):
+        self.raiz: tk.Tk = raiz
+        self.raiz.configure(bg="dark slate gray")
+        self.raiz.title("Cálculos Numéricos")
+        self.raiz.resizable(False, False)
+        self.raiz.bind_all("<Return>", lambda _event: self._calcular_todo())
+
+        # Atributos declarados en el modelo StarUML
+        self.notebook: ttk.Notebook | None = None
+        self.tab_basicos: tk.Frame | None = None
+        self.tab_avanzados: tk.Frame | None = None
+        self._ultimo_valor: str = ""
+        self.var_resultado: tk.StringVar = tk.StringVar(value="—")
+
+        # StringVars de respuesta visuales estilo Interfaz_3
+        self.resp_log = tk.StringVar(value="~ Ln(x)\n---> ???")
+        self.resp_raiz = tk.StringVar(value=" ~ √(x)\n---> ???")
+        self.resp_pend = tk.StringVar(value=" ~ Pend.(x)\n---> ???")
+        self.resp_pm = tk.StringVar(value=" ~ Pm(x)\n---> (???, ???)")
+        self.resp_raices = tk.StringVar(value=" ~ ax^2 + bx + c\n---> X1 = ?, X2 = ? ")
+        self.resp_bb = tk.StringVar(value=" ~ x en base 10\n---> ??? en base y")
+
+        titulo = tk.Label(
+            self.raiz,
+            text="CALCULOS NUMERICOS",
+            font=("Times New Roman", 18, "bold"),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        titulo.pack(pady=20)
+
+        tk.Frame(self.raiz, height=2, bg="snow").pack(fill="x", padx=20, pady=20)
+
+        self.tab_basicos = tk.Frame(self.raiz, width=1, bg="dark slate gray")
+        self.tab_basicos.pack(fill="x", expand=True)
+        self.tab_basicos.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
+
+        self._construir_tab_basicos()
+        self._construir_tab_avanzados()
+
+        boton = tk.Button(
+            self.raiz,
+            width=20,
+            command=self._calcular_todo,
+            bg="gray36",
+            fg="azure",
+            text="---> Calcular <---",
+        )
+        boton.pack(pady=20)
+
+        tk.Frame(self.raiz, height=2, bg="snow").pack(fill="x", padx=20, pady=20)
+
+        self._construir_panel_salida()
+
+    def _construir_tab_basicos(self) -> None:
+        assert self.tab_basicos is not None
+
+        lbl_log = tk.Label(
+            self.tab_basicos,
+            text="Calculo de logarito\nIngrese numero",
+            font=("Times New Roman", 12),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        lbl_log.grid(row=0, column=0, pady=10, padx=20)
+
+        lbl_raiz = tk.Label(
+            self.tab_basicos,
+            text="Calculo de raiz\nIngrese numero",
+            font=("Times New Roman", 12),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        lbl_raiz.grid(row=0, column=1, pady=10, padx=20)
+
+        self.ent_valor = tk.Entry(self.tab_basicos, width=15, justify="center")
+        self.ent_valor.grid(row=1, column=0, pady=10)
+
+        self.ent_raiz = tk.Entry(self.tab_basicos, width=15, justify="center")
+        self.ent_raiz.grid(row=1, column=1, pady=10)
+
+    def _construir_tab_avanzados(self) -> None:
+        assert self.tab_basicos is not None
+        self.tab_avanzados = self.tab_basicos
+
+        # Columnas 2 y 3: Geometría (Pendiente y Punto Medio)
+        lbl_pend = tk.Label(
+            self.tab_avanzados,
+            text="Calculo de pendiente\nIngrese coordenadas\nx1, y1, x2, y2",
+            font=("Times New Roman", 12),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        lbl_pend.grid(row=0, column=2, pady=10, padx=20)
+
+        lbl_pm = tk.Label(
+            self.tab_avanzados,
+            text="Calculo punto medio\nIngrese coordenadas\nx1, y1, x2, y2",
+            font=("Times New Roman", 12),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        lbl_pm.grid(row=0, column=3, pady=10, padx=20)
+
+        # Columna 4: Cuadrática
+        lbl_cuad = tk.Label(
+            self.tab_avanzados,
+            text="Calculo de raices\nIngrese constantes\na, b, c",
+            font=("Times New Roman", 12),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        lbl_cuad.grid(row=0, column=4, pady=10, padx=20)
+
+        # Columna 5: Cambio de bases
+        lbl_base = tk.Label(
+            self.tab_avanzados,
+            text="Calmbio de bases\nIngrese numero y base",
+            font=("Times New Roman", 12),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        lbl_base.grid(row=0, column=5, pady=10, padx=20)
+
+        # Entradas Pendiente
+        frame_pendiente = tk.Frame(self.tab_avanzados, bg="dark slate gray")
+        frame_pendiente.grid(row=1, column=2)
+
+        self.ent_x1 = tk.Entry(frame_pendiente, width=3, justify="center")
+        self.ent_x1.grid(row=0, column=0, pady=10, padx=5)
+        self.ent_y1 = tk.Entry(frame_pendiente, width=3, justify="center")
+        self.ent_y1.grid(row=0, column=1, pady=10, padx=5)
+        self.ent_x2 = tk.Entry(frame_pendiente, width=3, justify="center")
+        self.ent_x2.grid(row=0, column=2, pady=10, padx=5)
+        self.ent_y2 = tk.Entry(frame_pendiente, width=3, justify="center")
+        self.ent_y2.grid(row=0, column=3, pady=10, padx=5)
+
+        # Entradas Punto Medio
+        frame_pm = tk.Frame(self.tab_avanzados, bg="dark slate gray")
+        frame_pm.grid(row=1, column=3)
+
+        self.ent_pm_x1 = tk.Entry(frame_pm, width=3, justify="center")
+        self.ent_pm_x1.grid(row=0, column=0, pady=10, padx=5)
+        self.ent_pm_y1 = tk.Entry(frame_pm, width=3, justify="center")
+        self.ent_pm_y1.grid(row=0, column=1, pady=10, padx=5)
+        self.ent_pm_x2 = tk.Entry(frame_pm, width=3, justify="center")
+        self.ent_pm_x2.grid(row=0, column=2, pady=10, padx=5)
+        self.ent_pm_y2 = tk.Entry(frame_pm, width=3, justify="center")
+        self.ent_pm_y2.grid(row=0, column=3, pady=10, padx=5)
+
+        # Entradas Cuadrática
+        frame_cuadratica = tk.Frame(self.tab_avanzados, bg="dark slate gray")
+        frame_cuadratica.grid(row=1, column=4)
+
+        self.ent_a = tk.Entry(frame_cuadratica, width=5, justify="center")
+        self.ent_a.grid(row=0, column=0, pady=10, padx=5)
+        self.ent_b = tk.Entry(frame_cuadratica, width=5, justify="center")
+        self.ent_b.grid(row=0, column=1, pady=10, padx=5)
+        self.ent_c = tk.Entry(frame_cuadratica, width=5, justify="center")
+        self.ent_c.grid(row=0, column=2, pady=10, padx=5)
+
+        # Entradas Cambio de base
+        frame_base_b = tk.Frame(self.tab_avanzados, bg="dark slate gray")
+        frame_base_b.grid(row=1, column=5)
+
+        self.ent_numero = tk.Entry(frame_base_b, width=10, justify="center")
+        self.ent_numero.grid(row=0, column=0, pady=10, padx=5)
+
+        self.spin_base = tk.Spinbox(frame_base_b, from_=2, to=36, width=6, justify="center")
+        self.spin_base.delete(0, tk.END)
+        self.spin_base.insert(0, "2")
+        self.spin_base.grid(row=0, column=1, pady=10, padx=5)
+
+    def _construir_panel_salida(self) -> None:
+        titulo_2 = tk.Label(
+            self.raiz,
+            text="<<<<< RESPUESTAS >>>>>",
+            font=("Times New Roman", 16, "bold"),
+            bg="dark slate gray",
+            fg="thistle2",
+        )
+        titulo_2.pack(pady=20)
+
+        frame_respuesta = tk.Frame(self.raiz, width=1, bg="dark slate gray")
+        frame_respuesta.pack(fill="x", expand=True)
+        frame_respuesta.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
+
+        respuestas = [
+            self.resp_log,
+            self.resp_raiz,
+            self.resp_pend,
+            self.resp_pm,
+            self.resp_raices,
+            self.resp_bb,
+        ]
+
+        for col, var_resp in enumerate(respuestas):
+            lbl = tk.Label(
+                frame_respuesta,
+                textvariable=var_resp,
+                font=("Times New Roman", 12),
+                bg="dark slate gray",
+                fg="thistle2",
+            )
+            lbl.grid(row=0, column=col, pady=10, padx=20)
+
+    def _leer_floats(self, *entries: tk.Entry) -> list[float]:
+        valores: list[float] = []
+        for ent in entries:
+            texto = ent.get().strip().replace(",", ".")
+            if not texto:
+                raise ValueError("Campo vacío")
+            try:
+                valores.append(float(texto))
+            except ValueError as exc:
+                raise ValueError(f"'{texto}' no es un número válido.") from exc
+        return valores
+
+    def _limpiar_entries(self, *entries: tk.Entry) -> None:
+        for ent in entries:
+            ent.delete(0, tk.END)
+
+    def _mostrar_exito(self, titulo: str, mensaje: str, valor_copiable: str) -> None:
+        self.var_resultado.set(f"{titulo}: {mensaje}")
+        self._ultimo_valor = valor_copiable
+
+    def _mostrar_error(self, titulo: str, mensaje: str) -> None:
+        self.var_resultado.set(f"{titulo}: {mensaje}")
+        messagebox.showerror("Fallo de cálculo", mensaje)
+
+    def _copiar_resultado(self) -> None:
+        self.raiz.clipboard_clear()
+        self.raiz.clipboard_append(self._ultimo_valor)
+
+    def ejecutar_unario(self, operacion: str) -> None:
+        try:
+            if operacion == "log":
+                (valor,) = self._leer_floats(self.ent_valor)
+                calculo = CalculosNumericos.neperiano(valor)
+                texto = f"~ Ln({valor})\n---> {round(calculo, 2)}"
+                self.resp_log.set(texto)
+                self._mostrar_exito("Logaritmo", texto, str(round(calculo, 2)))
+            elif operacion == "raiz":
+                (valor,) = self._leer_floats(self.ent_raiz)
+                calculo = CalculosNumericos.raiz_cuadrada(valor)
+                texto = f" ~ √({valor})\n---> {round(calculo, 2)}"
+                self.resp_raiz.set(texto)
+                self._mostrar_exito("Raíz cuadrada", texto, str(round(calculo, 2)))
+        except ValueError as err:
+            self._mostrar_error("Error unario", str(err))
+
+    def ejecutar_geometria(self, modo: str) -> None:
+        try:
+            if modo == "pendiente":
+                x1, y1, x2, y2 = self._leer_floats(
+                    self.ent_x1, self.ent_y1, self.ent_x2, self.ent_y2
+                )
+                calculo = CalculosNumericos.pendiente_recta(x1, y1, x2, y2)
+                texto = f"~ Pend(({x1},{y1}), ({x2},{y2}))\n---> {round(calculo, 4)}"
+                self.resp_pend.set(texto)
+                self._mostrar_exito("Pendiente", texto, str(round(calculo, 4)))
+            elif modo == "medio":
+                x1, y1, x2, y2 = self._leer_floats(
+                    self.ent_pm_x1, self.ent_pm_y1, self.ent_pm_x2, self.ent_pm_y2
+                )
+                xm, ym = CalculosNumericos.punto_medio(x1, y1, x2, y2)
+                texto = f"~ Pm(({x1},{y1}), ({x2},{y2}))\n---> ({xm}, {ym})"
+                self.resp_pm.set(texto)
+                self._mostrar_exito("Punto medio", texto, f"({xm}, {ym})")
+        except ValueError as err:
+            self._mostrar_error("Error en geometría", str(err))
+
+    def ejecutar_cuadratica(self) -> None:
+        try:
+            a, b, c = self._leer_floats(self.ent_a, self.ent_b, self.ent_c)
+            x1, x2 = CalculosNumericos.raices_cuadratica(a, b, c)
+            texto = f"~ {a}x^2 + {b}x + {c}\n---> X1 ={round(x1, 4)}, X2 = {round(x2, 4)}"
+            self.resp_raices.set(texto)
+            self._mostrar_exito(
+                "Ecuación cuadrática", texto, f"{round(x1, 4)}, {round(x2, 4)}"
+            )
+        except ValueError as err:
+            self._mostrar_error("Error en cuadrática", str(err))
+
+    def ejecutar_conversion(self) -> None:
+        try:
+            num_txt = self.ent_numero.get().strip()
+            base_txt = self.spin_base.get().strip()
+            if not num_txt or not base_txt:
+                raise ValueError("Campo vacío")
+            try:
+                numero = int(num_txt)
+                base = int(base_txt)
+            except ValueError as exc:
+                raise ValueError(
+                    "Tanto el número como la base deben ser enteros."
+                ) from exc
+
+            calculo = CalculosNumericos.convertir_base(numero, base)
+            texto = f"~ {numero} en base 10\n---> {calculo} en base {base}"
+            self.resp_bb.set(texto)
+            self._mostrar_exito("Conversión de base", texto, calculo)
+        except ValueError as err:
+            self._mostrar_error("Error de conversión", str(err))
+
+    def _calcular_todo(self) -> None:
+        if self.ent_valor.get().strip():
+            self.ejecutar_unario("log")
+        if self.ent_raiz.get().strip():
+            self.ejecutar_unario("raiz")
+        if any(
+            e.get().strip()
+            for e in (self.ent_x1, self.ent_y1, self.ent_x2, self.ent_y2)
+        ):
+            self.ejecutar_geometria("pendiente")
+        if any(
+            e.get().strip()
+            for e in (self.ent_pm_x1, self.ent_pm_y1, self.ent_pm_x2, self.ent_pm_y2)
+        ):
+            self.ejecutar_geometria("medio")
+        if any(e.get().strip() for e in (self.ent_a, self.ent_b, self.ent_c)):
+            self.ejecutar_cuadratica()
+        if self.ent_numero.get().strip():
+            self.ejecutar_conversion()
+
+
+if __name__ == "__main__":
+    raiz = tk.Tk()
+    app = AppGUI(raiz)
+    raiz.mainloop()
