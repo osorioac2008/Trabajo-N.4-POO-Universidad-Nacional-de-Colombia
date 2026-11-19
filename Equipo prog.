@@ -1,0 +1,425 @@
+import tkinter as tk
+from tkinter import messagebox
+
+
+class EquipoCompletoError(Exception):
+    pass
+
+
+class FormatoTextoInvalidoError(Exception):
+    pass
+
+
+class ContrasenaError(Exception):
+    pass
+
+
+class ContrasenasNoCoincidenError(ContrasenaError):
+    pass
+
+
+class RequisitosContrasenaError(ContrasenaError):
+    pass
+
+
+class Programador:
+    def __init__(self, nombre: str, apellidos: str):
+        self.validar_atributos(nombre, apellidos)
+        self.nombre = nombre.strip()
+        self.apellidos = apellidos.strip()
+
+    @staticmethod
+    def validar_atributos(nombre: str, apellidos: str) -> None:
+        for campo, valor in (("Nombre", nombre), ("Apellidos", apellidos)):
+            if not isinstance(valor, str):
+                raise TypeError(f"El campo '{campo}' debe ser una cadena de texto.")
+
+            valor_limpio = valor.strip()
+            if not valor_limpio:
+                raise ValueError(f"El campo '{campo}' no puede estar vacío.")
+
+            if len(valor_limpio) >= 20:
+                raise ValueError(
+                    f"El campo '{campo}' debe tener menos de 20 caracteres (actual: {len(valor_limpio)})."
+                )
+
+            if any(char.isdigit() for char in valor_limpio):
+                raise FormatoTextoInvalidoError(f"El campo '{campo}' no puede contener números.")
+
+            if not all(char.isalpha() or char.isspace() for char in valor_limpio):
+                raise FormatoTextoInvalidoError(f"El campo '{campo}' solo debe contener letras.")
+
+    def __str__(self) -> str:
+        return f"{self.nombre} {self.apellidos}"
+
+
+class EquipoMaratonProgramacion:
+    def __init__(self, nombre: str, universidad: str, lenguaje_programacion: str, tamano: int):
+        if not isinstance(tamano, int):
+            raise TypeError("El tamaño del equipo debe ser un número entero.")
+        if not (2 <= tamano <= 3):
+            raise ValueError("El tamaño del equipo debe ser mínimo 2 y máximo 3 programadores.")
+        if not all(isinstance(c, str) and c.strip() for c in (nombre, universidad, lenguaje_programacion)):
+            raise ValueError("Nombre del equipo, universidad y lenguaje son obligatorios.")
+
+        self.nombre = nombre.strip()
+        self.universidad = universidad.strip()
+        self.lenguaje_programacion = lenguaje_programacion.strip()
+        self.tamano = tamano
+        self.miembros: list[Programador] = []
+
+    def esta_completo(self) -> bool:
+        return len(self.miembros) >= self.tamano
+
+    def anadir_programador(self, programador: Programador) -> None:
+        if self.esta_completo():
+            raise EquipoCompletoError(
+                f"El equipo '{self.nombre}' ya está lleno ({self.tamano}/{self.tamano} cupos)."
+            )
+        if not isinstance(programador, Programador):
+            raise TypeError("Solo se pueden añadir instancias válidas de Programador.")
+
+        self.miembros.append(programador)
+
+
+class Contrasena:
+    def __init__(self, password: str, confirmacion: str):
+        self.validar(password, confirmacion)
+        self._valor = password
+
+    @staticmethod
+    def validar(password: str, confirmacion: str) -> None:
+        if not isinstance(password, str) or not isinstance(confirmacion, str):
+            raise TypeError("Las contraseñas deben ser cadenas de texto.")
+
+        if password != confirmacion:
+            raise ContrasenasNoCoincidenError("Las contraseñas ingresadas no coinciden.")
+
+        if len(password) < 8:
+            raise RequisitosContrasenaError(
+                f"La contraseña debe tener mínimo 8 caracteres (actual: {len(password)})."
+            )
+
+        tiene_minuscula = False
+        tiene_mayuscula = False
+        tiene_numero = False
+        tiene_especial = False
+
+        for char in password:
+            if char.isspace():
+                raise RequisitosContrasenaError("La contraseña no debe contener espacios en blanco.")
+            elif char.islower():
+                tiene_minuscula = True
+            elif char.isupper():
+                tiene_mayuscula = True
+            elif char.isdigit():
+                tiene_numero = True
+            elif not char.isalnum():
+                tiene_especial = True
+
+        faltantes = []
+        if not tiene_minuscula:
+            faltantes.append("una letra minúscula")
+        if not tiene_mayuscula:
+            faltantes.append("una letra mayúscula")
+        if not tiene_numero:
+            faltantes.append("un número")
+        if not tiene_especial:
+            faltantes.append("un carácter especial (ej. @, #, $, %)")
+
+        if faltantes:
+            raise RequisitosContrasenaError(f"Falta incluir al menos: {', '.join(faltantes)}.")
+
+    def __str__(self) -> str:
+        return "*" * len(self._valor)
+
+
+class AppTallerGUI:
+    def __init__(self, raiz: tk.Tk):
+        self.raiz = raiz
+        self.raiz.title("EQUIPO PROGRAMACION")
+        self.raiz.resizable(False, False)
+        self.raiz.option_add("*background", "dark slate gray")
+        self.raiz.option_add("*foreground", "snow")
+        self.raiz.configure(bg="dark slate gray")
+
+        self.equipo_actual: EquipoMaratonProgramacion | None = None
+        self.clave_registrada: Contrasena | None = None
+        self.respuesta_decision = tk.StringVar()
+
+        self._construir_interfaz()
+        self._bloquear_contraseña()
+
+    @staticmethod
+    def _separador(parent, row: int, columnspan: int = 4, pady: int = 10):
+        linea = tk.Frame(parent, height=2, bg="snow")
+        linea.grid(row=row, column=0, columnspan=columnspan, sticky="ew", padx=20, pady=pady)
+
+    def _construir_interfaz(self):
+        titulo = tk.Label(self.raiz, text="REGISTRO E INGRESO DE COMPETENCIA", font=("Times New Roman", 16, "bold"))
+        titulo.pack(fill="x", pady=12)
+
+        frame_formulario = tk.Frame(self.raiz)
+        frame_formulario.pack(fill="x", pady=5)
+        frame_formulario.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="columnas_iguales")
+
+        tk.Label(frame_formulario, text="Nombre del equipo:", font=("Times New Roman", 12)).grid(row=0, column=0, pady=5)
+        tk.Label(frame_formulario, text="Nombre de la U:", font=("Times New Roman", 12)).grid(row=0, column=1, pady=5)
+        tk.Label(frame_formulario, text="Lenguaje de prog:", font=("Times New Roman", 12)).grid(row=0, column=2, pady=5)
+        tk.Label(frame_formulario, text="Tamaño del equipo:", font=("Times New Roman", 12)).grid(row=0, column=3, pady=5)
+
+        self.entry_nombre_equipo = tk.Entry(frame_formulario, width=20, bg="snow", fg="gray1", insertbackground="gray1")
+        self.entry_nombre_equipo.grid(row=1, column=0, pady=5, padx=10)
+
+        self.entry_universidad = tk.Entry(frame_formulario, width=20, bg="snow", fg="gray1", insertbackground="gray1")
+        self.entry_universidad.grid(row=1, column=1, pady=5, padx=10)
+
+        self.entry_lenguaje = tk.Entry(frame_formulario, width=20, bg="snow", fg="gray1", insertbackground="gray1")
+        self.entry_lenguaje.grid(row=1, column=2, pady=5, padx=10)
+
+        self.entry_tamano = tk.Entry(frame_formulario, width=20, bg="snow", fg="gray1", insertbackground="gray1")
+        self.entry_tamano.grid(row=1, column=3, pady=5, padx=10)
+
+        tk.Button(
+            frame_formulario,
+            text="Envio de datos",
+            command=self.ejecutar_crear_equipo,
+            width=20,
+            bg="snow",
+            fg="gray1"
+        ).grid(row=2, column=1, columnspan=2, pady=12)
+
+        self.var_equipo = tk.StringVar(frame_formulario, value="Esperando datos...")
+        tk.Label(frame_formulario, textvariable=self.var_equipo, font=("Times New Roman", 12)).grid(
+            row=3, column=0, columnspan=4, pady=4
+        )
+
+        self._separador(frame_formulario, row=4)
+
+        frame_herramientas = tk.Frame(self.raiz)
+        frame_herramientas.pack(fill="x", pady=5)
+        frame_herramientas.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="cols_herramientas")
+
+        tk.Label(frame_herramientas, text="VALIDACION DE EQUIPO", font=("Times New Roman", 14, "bold")).grid(
+            row=0, column=0, columnspan=4, pady=5
+        )
+
+        self.var_validacion = tk.StringVar(frame_herramientas, value="Esperando datos...")
+        tk.Label(frame_herramientas, textvariable=self.var_validacion, font=("Times New Roman", 12)).grid(
+            row=1, column=0, columnspan=4, pady=5
+        )
+
+        self._separador(frame_herramientas, row=2)
+
+        tk.Label(frame_herramientas, text="INGRESO DE NUEVOS USUARIOS", font=("Times New Roman", 14, "bold")).grid(
+            row=3, column=0, columnspan=4, pady=5
+        )
+
+        self.lbl_pregunta_extra = tk.Label(
+            frame_herramientas, text="Desea añadir programadores? (si/no):", font=("Times New Roman", 12)
+        )
+        self.entry_decision = tk.Entry(
+            frame_herramientas, textvariable=self.respuesta_decision, width=20, bg="snow", fg="gray1", insertbackground="gray1"
+        )
+
+        self.lbl_usuario_extra = tk.Label(
+            frame_herramientas, text="Nombre y apellido del programador:", font=("Times New Roman", 12)
+        )
+        self.entry_usuario_extra = tk.Entry(
+            frame_herramientas, width=25, bg="snow", fg="gray1", insertbackground="gray1"
+        )
+
+        self.btn_anadir_prog = tk.Button(
+            frame_herramientas,
+            text="Añadir Programador",
+            command=self.ejecutar_anadir_programador,
+            width=20,
+            bg="snow",
+            fg="gray1"
+        )
+
+        self.var_resultado_usuario = tk.StringVar(
+            frame_herramientas, value="Complete el registro del equipo primero..."
+        )
+        tk.Label(frame_herramientas, textvariable=self.var_resultado_usuario, font=("Times New Roman", 12)).grid(
+            row=7, column=0, columnspan=4, pady=5
+        )
+
+        self.respuesta_decision.trace_add("write", self._evaluar_decision)
+
+        self._separador(frame_herramientas, row=8)
+
+        tk.Label(frame_herramientas, text="CREACION DE CONTRASEÑA", font=("Times New Roman", 14, "bold")).grid(
+            row=9, column=0, columnspan=4, pady=5
+        )
+
+        tk.Label(frame_herramientas, text="Contraseña:", font=("Times New Roman", 12)).grid(
+            row=10, column=0, columnspan=2, sticky="e", padx=10, pady=5
+        )
+        self.entry_pass = tk.Entry(frame_herramientas, show="*", width=22, state="disabled")
+        self.entry_pass.grid(row=10, column=2, columnspan=2, sticky="w", padx=10, pady=5)
+
+        tk.Label(frame_herramientas, text="Confirmar contraseña:", font=("Times New Roman", 12)).grid(
+            row=11, column=0, columnspan=2, sticky="e", padx=10, pady=5
+        )
+        self.entry_pass_val = tk.Entry(frame_herramientas, show="*", width=22, state="disabled")
+        self.entry_pass_val.grid(row=11, column=2, columnspan=2, sticky="w", padx=10, pady=5)
+
+        self.btn_guardar_pass = tk.Button(
+            frame_herramientas,
+            text="Guardar Contraseña",
+            command=self.ejecutar_validar_contrasena,
+            width=20,
+            state="disabled"
+        )
+        self.btn_guardar_pass.grid(row=12, column=0, columnspan=4, pady=10)
+
+        self.var_resultado_pass = tk.StringVar(
+            frame_herramientas, value="Bloqueado hasta completar pasos anteriores..."
+        )
+        tk.Label(frame_herramientas, textvariable=self.var_resultado_pass, font=("Times New Roman", 12)).grid(
+            row=13, column=0, columnspan=4, pady=5
+        )
+
+    def _desbloquear_contraseña(self):
+        self.entry_pass.config(state="normal", bg="snow", fg="gray1", insertbackground="gray1")
+        self.entry_pass_val.config(state="normal", bg="snow", fg="gray1", insertbackground="gray1")
+        self.btn_guardar_pass.config(state="normal", bg="snow", fg="gray1")
+        self.var_resultado_pass.set("Listo para crear contraseña...")
+
+    def _bloquear_contraseña(self):
+        self.entry_pass.config(state="disabled")
+        self.entry_pass_val.config(state="disabled")
+        self.btn_guardar_pass.config(state="disabled")
+
+    def _texto_equipo(self) -> str:
+        if not self.equipo_actual:
+            return "Esperando datos..."
+        integrantes = ", ".join(str(m) for m in self.equipo_actual.miembros)
+        extra = f" | Integrantes: {integrantes}" if integrantes else ""
+        return (
+            f"Equipo: {self.equipo_actual.nombre} ({self.equipo_actual.universidad}) - "
+            f"{self.equipo_actual.lenguaje_programacion}{extra}"
+        )
+
+    def _texto_estado_equipo(self) -> str:
+        if not self.equipo_actual:
+            return "Esperando datos..."
+        actual = len(self.equipo_actual.miembros)
+        total = self.equipo_actual.tamano
+        if self.equipo_actual.esta_completo():
+            return f"Equipo completo ({actual}/{total} integrantes)"
+        return f"Equipo de {actual} integrantes (cupo máximo: {total})"
+
+    def _evaluar_decision(self, *args):
+        texto = self.respuesta_decision.get().strip().lower()
+        if texto == "si":
+            self.lbl_usuario_extra.grid(row=5, column=0, columnspan=2, sticky="e", padx=10, pady=5)
+            self.entry_usuario_extra.grid(row=5, column=2, columnspan=2, sticky="w", padx=10, pady=5)
+            self.btn_anadir_prog.grid(row=6, column=0, columnspan=4, pady=8)
+        elif texto == "no":
+            self.lbl_usuario_extra.grid_remove()
+            self.entry_usuario_extra.grid_remove()
+            self.btn_anadir_prog.grid_remove()
+            self.var_resultado_usuario.set("No se añadieron mas programadores.")
+            self._desbloquear_contraseña()
+        else:
+            self.lbl_usuario_extra.grid_remove()
+            self.entry_usuario_extra.grid_remove()
+            self.btn_anadir_prog.grid_remove()
+
+    def ejecutar_crear_equipo(self):
+        try:
+            try:
+                tamano = int(self.entry_tamano.get())
+            except ValueError:
+                messagebox.showwarning("Fallo de campo", "Debe ingresar un numero entero")
+                return
+
+            nombre_eq = self.entry_nombre_equipo.get()
+            uni = self.entry_universidad.get()
+            leng = self.entry_lenguaje.get()
+
+            self.equipo_actual = EquipoMaratonProgramacion(nombre_eq, uni, leng, tamano)
+            self.clave_registrada = None
+
+            self.var_equipo.set(self._texto_equipo())
+            self.var_validacion.set(self._texto_estado_equipo())
+            self._bloquear_contraseña()
+
+            if tamano == 3:
+                self.lbl_pregunta_extra.grid_remove()
+                self.entry_decision.grid_remove()
+                self.lbl_usuario_extra.grid_remove()
+                self.entry_usuario_extra.grid_remove()
+                self.btn_anadir_prog.grid_remove()
+                self.var_resultado_usuario.set("Equipo configurado con cupo máximo de 3.")
+                self._desbloquear_contraseña()
+            elif tamano == 2:
+                self.respuesta_decision.set("")
+                self.entry_usuario_extra.delete(0, tk.END)
+                self.var_resultado_usuario.set("Esperando respuesta...")
+                self.var_resultado_pass.set("Bloqueado hasta definir usuarios...")
+                self.lbl_pregunta_extra.grid(row=4, column=0, columnspan=2, sticky="e", padx=10, pady=5)
+                self.entry_decision.grid(row=4, column=2, columnspan=2, sticky="w", padx=10, pady=5)
+
+        except (ValueError, TypeError) as exc:
+            messagebox.showerror("Fallo de calculo", str(exc))
+
+    def ejecutar_anadir_programador(self):
+        if self.equipo_actual is None:
+            messagebox.showwarning("Aviso", "Primero registre el equipo.")
+            return
+
+        try:
+            decision = self.respuesta_decision.get().strip().lower()
+            if decision != "si":
+                raise ValueError("Seleccione 'si' o 'no' para continuar")
+
+            nombre_completo = self.entry_usuario_extra.get().strip()
+            partes = nombre_completo.split()
+            if len(partes) < 2:
+                raise FormatoTextoInvalidoError("Ingrese nombre y apellido del programador.")
+
+            nombre_prog = partes[0]
+            apellidos_prog = " ".join(partes[1:])
+
+            programador = Programador(nombre_prog, apellidos_prog)
+            self.equipo_actual.anadir_programador(programador)
+
+            self.var_resultado_usuario.set(f"Programador '{programador}' añadido.")
+            self.var_equipo.set(self._texto_equipo())
+            self.var_validacion.set(self._texto_estado_equipo())
+            self.entry_usuario_extra.delete(0, tk.END)
+
+            if self.equipo_actual.esta_completo():
+                self.lbl_pregunta_extra.grid_remove()
+                self.entry_decision.grid_remove()
+                self.lbl_usuario_extra.grid_remove()
+                self.entry_usuario_extra.grid_remove()
+                self.btn_anadir_prog.grid_remove()
+
+            self._desbloquear_contraseña()
+
+        except (ValueError, TypeError, FormatoTextoInvalidoError, EquipoCompletoError) as exc:
+            messagebox.showerror("Error de usuario", str(exc))
+
+    def ejecutar_validar_contrasena(self):
+        if self.equipo_actual is None:
+            messagebox.showwarning("Aviso", "Primero registre el equipo.")
+            return
+
+        try:
+            p1 = self.entry_pass.get()
+            p2 = self.entry_pass_val.get()
+            self.clave_registrada = Contrasena(p1, p2)
+            self.var_resultado_pass.set(f"Contraseña creada con exito ({self.clave_registrada}).")
+        except (ContrasenaError, TypeError) as exc:
+            self.clave_registrada = None
+            messagebox.showerror("Error de contraseña", str(exc))
+
+
+if __name__ == "__main__":
+    raiz = tk.Tk()
+    app = AppTallerGUI(raiz)
+    raiz.mainloop()
