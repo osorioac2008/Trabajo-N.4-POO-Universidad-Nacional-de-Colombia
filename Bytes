@@ -1,0 +1,86 @@
+import tkinter as tk
+from tkinter import messagebox
+
+
+
+def extractor(archivo):
+    
+    if archivo == "":
+        raise ValueError("Campo Vacio")
+    
+    pruebas = open(f"{archivo}.txt", "rb")
+
+    bytes = []
+
+    while True:
+        byte = pruebas.read(1)
+        if byte == b"":
+            break
+        bytes.append(byte)
+
+    unidos = b"".join(bytes)
+    pruebas.close()
+    return unidos.decode("utf-8")
+
+def Mayusculas(archivo):
+    texto = extractor(archivo)
+    return texto.upper()
+def normal(archivo):
+    texto = extractor(archivo)
+    return texto
+
+
+Interfaz = tk.Tk()
+Interfaz.option_add("*background", "dark slate gray")
+Interfaz.option_add("*foreground", "snow")
+
+Interfaz.title("EXTRACTOR DE BYTES")
+Interfaz.geometry("400x450")
+Interfaz.resizable(False, False)
+Interfaz.configure(bg = "dark slate gray")
+
+Titulo = tk.Label(Interfaz, text = "Extraccion de bytes de archivos", font = ("Times New roman", 20, "bold"))
+Titulo.grid(row = 0, column = 0, pady = 20, padx = 15)
+
+
+Subtitulo = tk.Label(Interfaz, text = "Ingrese el nombre del archivo:", font = ("Times New roman", 14))
+Subtitulo.grid(row = 2, column = 0, pady = 20, padx = 15)
+
+Ing_archivo = tk.Entry(Interfaz, width = 20)
+Ing_archivo.grid(row = 3, column = 0, pady = 10, padx = 15)
+
+def calculo_normal():
+    try:
+        archivo = Ing_archivo.get()
+        desencriptar = normal(archivo)
+        desencriptado.set(f"{desencriptar}")
+             
+    except ValueError as x:
+        messagebox.showwarning("Fallo de desencriptacion", x) 
+        
+def calculo_mayusculas():
+    try:
+        archivo = Ing_archivo.get()
+        desencriptar = Mayusculas(archivo)
+        desencriptado.set(f"{desencriptar}") 
+        
+    except ValueError as x:
+        messagebox.showwarning  
+
+Bot_archivo_1 = tk.Button(Interfaz, text = "Busqueda y rescate basico", width = 40, command = calculo_normal)
+Bot_archivo_1.grid(row = 4, column = 0, pady = 10)
+
+Bot_archivo_2 = tk.Button(Interfaz, text = "Busqueda y rescate mayusculo", width = 40, command = calculo_mayusculas)
+Bot_archivo_2.grid(row = 5, column = 0, pady = 10)
+
+linea = tk.Label(Interfaz, text = "_______________________________________________________________________________")
+linea.grid(row = 6, column = 0, pady = 10)
+
+Texto_resultado = tk.Label(Interfaz, text = "Desencriptacion en progreso...", font = ("Times New Roman", 14, "bold"))
+Texto_resultado.grid(row = 7, column = 0, pady = 20)
+
+desencriptado = tk.StringVar(value = "Desencriptacion: ---> ")       
+Desencriptado = tk.Label(Interfaz, textvariable = desencriptado)
+Desencriptado.grid(row = 8, column = 0, pady = 10) 
+
+Interfaz.mainloop()
