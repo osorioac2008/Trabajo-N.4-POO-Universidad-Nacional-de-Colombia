@@ -1,0 +1,143 @@
+import tkinter as tk
+from tkinter import messagebox
+
+
+class ExcepcionNula(Exception):
+    pass
+
+
+class ExcepcionFueraDeRango(Exception):
+    pass
+
+
+class Procesado:
+    def __init__(self, modo: str):
+        self.modo = modo
+
+    def operacion(self) -> str:
+        if self.modo == "bloque1":
+            try:
+                print("Ingresando al primer try")
+                cociente = 10000 / 0
+                print("Después de la división")
+            except ZeroDivisionError:
+                print("División por cero")
+                return "División por cero\nIngresando al primer finally"
+            finally:
+                print("Ingresando al primer finally")
+
+        elif self.modo == "bloque2":
+            try:
+                print("Ingresando al segundo try")
+                objeto = None
+                if objeto is None:
+                    raise ExcepcionNula("Objeto nulo")
+                objeto.to_string()
+            except ExcepcionNula:
+                print("Ocurrió una excepción de objeto nulo")
+                return "Ocurrió una excepción de objeto nulo\nIngresando al segundo finally"
+            finally:
+                print("Ingresando al segundo finally")
+
+        elif self.modo == "bloque3":
+            try:
+                print("Ingresando al try del bloque 3")
+                numero = int("Número")
+                print(numero)
+            except ValueError:
+                print("Excepción de formato de número")
+                return "Excepción de formato de número\nIngresando al finally"
+            finally:
+                print("Ingresando al finally")
+
+        elif self.modo == "bloque4":
+            try:
+                print("Ingresando al try del bloque 4")
+                texto = "Programación"
+                indice = 12
+                if not 0 <= indice < len(texto):
+                    raise ExcepcionFueraDeRango("Índice fuera de rango")
+                print(texto[indice])
+            except ExcepcionFueraDeRango:
+                print("Índice de string por fuera del límite")
+                return "Índice de string por fuera del límite\nIngresando al finally"
+            finally:
+                print("Ingresando al finally")
+
+
+class GUI:
+    def __init__(self, ventana: tk.Tk):
+        self.ventana: tk.Tk = ventana
+        self.ventana.title("Manejo de errores")
+        self.ventana.resizable(False, False)
+        self.ventana.option_add("*background", "dark slate gray")
+        self.ventana.option_add("*foreground", "snow")
+        self.ventana.configure(bg="dark slate gray")
+
+        tk.Label(self.ventana, text="MANEJO DE EXCEPCIONES", font=30).pack(pady=20)
+        tk.Label(self.ventana, text="Seleccione un bloque para probar", font=16).pack(pady=10)
+
+        frame_botones = tk.Frame(self.ventana)
+        frame_botones.pack(pady=10)
+
+        self.btn_bloque1: tk.Button = tk.Button(
+            frame_botones,
+            width=28,
+            command=lambda: self.ExeCalculo("bloque1"),
+            text="Bloque 1: Division por cero",
+        )
+        self.btn_bloque1.grid(row=0, column=0, pady=8, padx=15)
+
+        self.btn_bloque2: tk.Button = tk.Button(
+            frame_botones,
+            width=28,
+            command=lambda: self.ExeCalculo("bloque2"),
+            text="Bloque 2: Objeto nulo",
+        )
+        self.btn_bloque2.grid(row=1, column=0, pady=8, padx=15)
+
+        self.btn_bloque3: tk.Button = tk.Button(
+            frame_botones,
+            width=28,
+            command=lambda: self.ExeCalculo("bloque3"),
+            text="Bloque 3: Formato de numero",
+        )
+        self.btn_bloque3.grid(row=2, column=0, pady=8, padx=15)
+
+        self.btn_bloque4: tk.Button = tk.Button(
+            frame_botones,
+            width=28,
+            command=lambda: self.ExeCalculo("bloque4"),
+            text="Bloque 4: Indice de string",
+        )
+        self.btn_bloque4.grid(row=3, column=0, pady=8, padx=15)
+
+        for widget in frame_botones.winfo_children():
+            widget.configure(bg="snow", fg="gray1")
+
+        espacio = tk.Frame(self.ventana, height=2)
+        espacio.pack(fill="x", pady=10)
+        espacio.configure(bg="snow")
+
+        self.salida: tk.StringVar = tk.StringVar(value="Resultado del proceso:\n--->  <---")
+        self.lbl_resultado: tk.Label = tk.Label(
+            self.ventana, textvariable=self.salida, pady=15
+        )
+        self.lbl_resultado.pack()
+
+    def ExeCalculo(self, modo: str) -> None:
+        try:
+            instancia = Procesado(modo)
+            resultado = instancia.operacion()
+            self.salida.set(f"Resultado del proceso:\n---> {resultado} <---")
+            messagebox.showinfo("EJECUCION COMPLETADA", resultado)
+        except Exception as x:
+            messagebox.showwarning("Advertencia", str(x))
+        finally:
+            print("[GUI] Ejercicio finalizado. Esperando siguiente instrucción.\n" + "-" * 30)
+
+
+if __name__ == "__main__":
+    raiz = tk.Tk()
+    app = GUI(raiz)
+    raiz.mainloop()
